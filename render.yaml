@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: saee-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/plans
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////tmp/universal_fit.db
+      - key: CORS_ORIGINS
+        value: http://localhost:5173,https://saee-fashion.web.app,https://saee-b9dfe.web.app
+      - key: SESSION_SECRET
+        generateValue: true
