@@ -139,7 +139,7 @@ export function StyleStudio({
     <>
       <div className="grid-2">
         <div className="card">
-          <h3>Occasion Styling AI (Professional ₹199/mo+)</h3>
+          <h3>Occasion Styling AI</h3>
           <p className="muted">
             Select an occasion and optionally attach a photo for personalised looks.
           </p>
@@ -186,7 +186,7 @@ export function StyleStudio({
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-                {hasPlan ? "Generate Occasion Outfit" : "Locked — Buy Plan or Start Trial"}
+                {hasPlan ? "Generate Occasion Outfit" : "Loading..."}
               </button>
             </div>
           </form>
@@ -194,7 +194,7 @@ export function StyleStudio({
         </div>
 
         <div className="card">
-          <h3>Couple Matching (Professional ₹199/mo+)</h3>
+          <h3>Couple Matching</h3>
           <p className="muted">Harmonise colours, silhouettes, and contrast with your partner.</p>
           <form onSubmit={runCouple} className="form-grid">
             <div className="field">
@@ -215,7 +215,7 @@ export function StyleStudio({
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-                {hasPlan ? "Match Couple Outfits" : "Locked — Buy Plan or Start Trial"}
+                {hasPlan ? "Match Couple Outfits" : "Loading..."}
               </button>
             </div>
           </form>

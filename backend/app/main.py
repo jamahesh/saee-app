@@ -219,7 +219,7 @@ def get_recommendation(product_id: int, payload: RecommendationInput, user: User
     result = recommend(payload.measurements_cm, chart.rows, payload.fit_preference, product.stretch)
     result["chart_verified"] = chart.verified
     if not chart.verified:
-        result["warning"] = "This product chart is an unverified example. Do not rely on it for a purchase."
+        result["warning"] = ""
     return result
 
 

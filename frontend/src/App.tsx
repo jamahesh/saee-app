@@ -3,7 +3,7 @@ import { apiFetch } from "./api";
 import { AdsAndPlans } from "./components/AdsAndPlans";
 import { FitPanel } from "./components/FitPanel";
 import { StyleStudio } from "./components/StyleStudio";
-import type { PartnerAd, PlanInfo, ProfileData, User, WardrobeItem } from "./types";
+import type { PartnerAd, ProfileData, User, WardrobeItem } from "./types";
 
 type Tab = "fit" | "body" | "occasion" | "ads";
 
@@ -29,9 +29,8 @@ export default function App() {
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
   const [user, setUser] = useState<User | null>({id:0,email:"guest@saee.app",name:"SAEE Guest",role:"owner",plan_code:"studio",plan_status:"active",plan_active:true} as unknown as User);
-  const [plans, setPlans] = useState<PlanInfo[]>([]);
-  const [razorpayReady, setRazorpayReady] = useState(false);
-  const [geminiReady, setGeminiReady] = useState(false);
+
+
   const [ads, setAds] = useState<PartnerAd[]>([]);
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
@@ -69,9 +68,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    apiFetch<{ razorpay_ready: boolean; gemini_ready: boolean; plans: PlanInfo[] }>("/api/plans")
-      .then((d) => { setPlans(d.plans || []); setRazorpayReady(Boolean(d.razorpay_ready)); setGeminiReady(Boolean(d.gemini_ready)); })
-      .catch(() => showMessage("warn", "SAEE server is waking up (~30s on free plan) — please refresh in a moment."));
+    apiFetch("/health").catch(() => showMessage("warn", "SAEE server is waking up (~30s on free plan) — please refresh in a moment."));
     void refreshAds();
     void loadUserContext();
   }, []);
@@ -118,7 +115,7 @@ export default function App() {
         <StyleStudio mode={tab} user={user} profile={profile} wardrobe={wardrobe} onProfileChange={setProfile} onWardrobeRefresh={refreshWardrobe} onMessage={showMessage} onGoPlans={() => setTab("fit")} />
       )}
       {tab === "ads" && (
-        <AdsAndPlans mode="ads" user={user} plans={plans} razorpayReady={razorpayReady} geminiReady={geminiReady} ads={ads} onAuthChange={(u) => { setUser(u); if (u) void loadUserContext(); }} onRefreshAds={refreshAds} onMessage={showMessage} />
+        <AdsAndPlans ads={ads} onRefreshAds={refreshAds} onMessage={showMessage} />
       )}
 
       {!isAdFree && ads.length > 0 && (

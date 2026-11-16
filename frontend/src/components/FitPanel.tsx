@@ -81,7 +81,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
       });
       setFootRes(res);
     } catch (err) {
-      handleErr(err, "Footwear sizing requires Essential (₹99/mo)+ or trial.");
+      handleErr(err, "Could not calculate footwear size.");
     } finally {
       setBusy(false);
     }
@@ -90,7 +90,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
   return (
     <div className="grid-2">
       <div className="card">
-        <h2>Clothing Size Engine (Essential ₹99/mo+)</h2>
+        <h2>Clothing Size Engine</h2>
         <p className="muted">Verified multi-measurement garment sizing preserved from Universal Fit.</p>
         <form onSubmit={calculateClothingSize}>
           <div className="form-grid">
@@ -113,7 +113,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-              {hasPlan ? "Calculate Clothing Size" : "Locked — Buy Plan or Start Trial"}
+              {hasPlan ? "Calculate Clothing Size" : "Loading..."}
             </button>
             <button
               type="button"
@@ -135,7 +135,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
             <div className="muted">
               Alternative: {sizeRes.alternative_size || "None"} &middot; Confidence: {sizeRes.confidence}
             </div>
-            {sizeRes.warning && <div className="notice warn">{sizeRes.warning}</div>}
+            
             <ul className="feature-list">
               {sizeRes.explanation.map((line, i) => (
                 <li key={i}>{line}</li>
@@ -146,7 +146,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
       </div>
 
       <div className="card">
-        <h2>Footwear Size Calculator (Essential ₹99/mo+)</h2>
+        <h2>Footwear Size Calculator</h2>
         <p className="muted">Convert exact foot length in cm into EU, UK, US &amp; India footwear sizes.</p>
         <form onSubmit={calculateFootwear}>
           <div className="form-grid">
@@ -173,7 +173,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
             </select>
           </div>
           <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-            {hasPlan ? "Calculate Footwear Size" : "Locked — Buy Plan or Start Trial"}
+            {hasPlan ? "Calculate Footwear Size" : "Loading..."}
           </button>
         </form>
         {footRes && (

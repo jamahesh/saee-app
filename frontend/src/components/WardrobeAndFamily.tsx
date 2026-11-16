@@ -114,7 +114,7 @@ export function FamilyAndWardrobe({
   return (
     <div className="grid-2" style={{ marginTop: 18 }}>
       <div className="card">
-        <h3>Family Section (Studio Plan ₹499/mo)</h3>
+        <h3>Family Section</h3>
         <p className="muted">
           Coordinated colour palettes and silhouettes across family members.
         </p>
@@ -196,7 +196,7 @@ export function FamilyAndWardrobe({
       </div>
 
       <div className="card">
-        <h3>Digital Wardrobe (Professional ₹199/mo+)</h3>
+        <h3>Digital Wardrobe</h3>
         <p className="muted">Save outfits you own so SAEE includes them in styling plans.</p>
         {!hasPlan && (
           <div className="notice warn" style={{ marginBottom: 12 }}>

@@ -141,7 +141,7 @@ export function PhotoAnswerCard({
     <div className="card">
       <h2>Optional Photo Answer (If You Want)</h2>
       <p className="muted">
-        Upload an optional outfit or mirror photo for tailored fit, colour-harmony, and styling answers (requires active plan or 7-day Essential trial).
+        Upload an optional outfit or mirror photo for tailored fit, colour-harmony, and styling answers.
       </p>
       <form onSubmit={submit}>
         <div className="form-grid">
@@ -167,7 +167,7 @@ export function PhotoAnswerCard({
           </div>
         )}
         <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-          {hasPlan ? "Get Photo Answer" : "Locked — Buy Plan or Start Trial"}
+          {hasPlan ? "Get Photo Answer" : "Loading..."}
         </button>
       </form>
       <SmartOutput title="SAEE Photo Answer" data={result} />

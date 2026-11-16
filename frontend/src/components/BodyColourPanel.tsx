@@ -79,7 +79,7 @@ export function BodyColourPanel({ user, profile, onProfileChange, onMessage, onG
     <>
       <div className="grid-2">
         <div className="card">
-          <h3>Saved Body &amp; Colour Profile (Essential ₹99/mo+)</h3>
+          <h3>Saved Body &amp; Colour Profile</h3>
           <p className="muted">Save your body colour, undertone, and measurements once.</p>
           <form onSubmit={saveProfile} className="form-grid">
             <div className="field">
@@ -135,19 +135,19 @@ export function BodyColourPanel({ user, profile, onProfileChange, onMessage, onG
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <button type="submit" className="btn-primary" disabled={busy || !hasPlan}>
-                {hasPlan ? "Save SAEE Profile" : "Locked — Buy Plan or Start Trial"}
+                {hasPlan ? "Save SAEE Profile" : "Loading..."}
               </button>
             </div>
           </form>
         </div>
 
         <div className="card">
-          <h3>Skin Tone Colour Analysis (Essential ₹99/mo+)</h3>
+          <h3>Skin Tone Colour Analysis</h3>
           <p className="muted">
             Instant colour guide tailored to <strong>{profile.body_colour}</strong> ({profile.undertone} undertone).
           </p>
           <button type="button" className="btn-primary" disabled={busy || !hasPlan} onClick={runColourAnalysis}>
-            {hasPlan ? "Analyze My Best Colours" : "Locked — Buy Plan or Start Trial"}
+            {hasPlan ? "Analyze My Best Colours" : "Loading..."}
           </button>
           <SmartOutput title="AI Skin Tone Colour Guide" data={colorResult} />
         </div>
