@@ -97,7 +97,7 @@ export default function App() {
       </header>
 
       <nav className="nav-tabs">
-        {([["fit", "Fit & Footwear"], ["body", "Body & Colour + Photo"], ["occasion", "Occasion AI & Wardrobe"], ["ads", "Partner Brand Ads"]] as [Tab, string][]).map(([id, label]) => (
+        {([["fit", "Fit & Footwear"], ["body", "Body & Colour + Photo"], ["occasion", "Occasions & Wardrobe"], ["ads", "Partner Brand Ads"]] as [Tab, string][]).map(([id, label]) => (
           <button key={id} type="button" className={`tab-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
         ))}
       </nav>

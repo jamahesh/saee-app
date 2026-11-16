@@ -149,7 +149,7 @@ export function BodyColourPanel({ user, profile, onProfileChange, onMessage, onG
           <button type="button" className="btn-primary" disabled={busy || !hasPlan} onClick={runColourAnalysis}>
             {hasPlan ? "Analyze My Best Colours" : "Loading..."}
           </button>
-          <SmartOutput title="AI Skin Tone Colour Guide" data={colorResult} />
+          <SmartOutput title="Your Best Colours" data={colorResult} />
         </div>
       </div>
 

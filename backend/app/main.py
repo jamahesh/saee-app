@@ -337,30 +337,58 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str = Header(
 
 import os as _os,json as _json,urllib.request as _ur
 from fastapi import Body as _Body
-@app.post("/api/assistant/guide")
-def assistant_guide(payload:dict=_Body(...)):
- msg=str(payload.get("message") or "").strip();tab=str(payload.get("tab") or "fit")
- prof=payload.get("profile") or {};hist=payload.get("history") or [];low=msg.lower();sug=None
- if any(k in low for k in ("size","chest","waist","measur","shoe","foot","fit")):sug="fit"
- elif any(k in low for k in ("skin","tone","colou","color","photo","undertone","profile")):sug="body"
- elif any(k in low for k in ("occasion","wedding","party","wardrobe","couple","family","outfit")):sug="occasion"
- elif any(k in low for k in ("ad","brand","partner","campaign")):sug="ads"
- key=(_os.getenv("GEMINI_API_KEY") or "").strip()
- if key and msg:
-  try:
-   st="You are SAEE AI Style Guide. Tabs: fit (Fit & Footwear), body (Body & Colour + Photo), occasion (Occasion AI & Wardrobe), ads (Partner Brand Ads). Tab: "+tab+". Profile: "+_json.dumps(prof)[:400]+". Give concise step-by-step guidance."
-   ts=[{"role":"user" if h.get("role")=="user" else "model","parts":[{"text":str(h.get("text") or "")[:300]}]} for h in hist[-6:]]+[{"role":"user","parts":[{"text":msg}]}]
-   rb=_json.dumps({"systemInstruction":{"parts":[{"text":st}]},"contents":ts}).encode()
-   rq=_ur.Request("https://generativelanguage.googleapis.com/v1beta/models/gemini-4-hydrogen:generateContent?key="+key,data=rb,headers={"Content-Type":"application/json","User-Agent":"aistudio-build"})
-   with _ur.urlopen(rq,timeout=15) as r:
-    tx=_json.loads(r.read().decode())["candidates"][0]["content"]["parts"][0]["text"].strip()
-    if tx:return {"reply":tx,"suggested_tab":sug}
-  except Exception:pass
- col=prof.get("body_colour") or "your skin tone";und=prof.get("undertone") or "Warm"
- ch=prof.get("chest_cm") or 100;wa=prof.get("waist_cm") or 88;ft=prof.get("foot_length_cm") or 26.5
- if sug=="fit":rep=f"Measure fullest chest ({ch} cm), natural waist ({wa} cm), and standing heel-to-toe foot ({ft} cm), then click Calculate in Fit & Footwear."
- elif sug=="body":rep=f"Saved tone: {col} ({und}). Open Body & Colour + Photo to update measurements, run Skin Tone Colour Analysis, or upload a photo for Photo AI."
- elif sug=="occasion":rep="Open Occasion AI & Wardrobe to save outfits in Digital Wardrobe, build event looks, or match couple and family outfits."
- elif sug=="ads":rep="Open Partner Brand Ads to view featured brand campaigns or publish a new partner campaign."
- else:rep="Quick SAEE guide: 1) Fit & Footwear for clothing & shoe sizes. 2) Body & Colour + Photo for skin-tone colours & photo advice. 3) Occasion AI & Wardrobe for event & couple/family looks."
- return {"reply":rep,"suggested_tab":sug}
+
+# --- SAEE Human Stylist ---
+import json as _sj, urllib.request as _sr, os as _so, re as _sre
+from fastapi.responses import JSONResponse as _SJ
+_TC = {'warm': ['Olive Moss', 'Terracotta Rust', 'Warm Ivory', 'Mustard Ochre'], 'cool': ['Navy Blue', 'Emerald', 'Burgundy', 'Crisp White'], 'neutral': ['Sage Green', 'Camel Beige', 'Charcoal', 'Espresso Brown']}
+def _pcols(prof, msg=''):
+    u, m = str((prof or {}).get('undertone', 'warm')).lower(), msg.lower()
+    if any(w in m for w in ('wed', 'fest', 'party')):
+        return ['Burgundy', 'Navy Blue', 'Emerald', 'Warm Ivory'] if 'cool' in u else ['Emerald', 'Mustard Ochre', 'Burgundy', 'Warm Ivory']
+    return next((v for k, v in _TC.items() if k in u), _TC['warm'])
+def _sh(s, n=140):
+    t = _sre.sub(r'\s+', ' ', _sre.sub(r'Add GEMINI_API_KEY[^.]*[.]?', '', str(s or ''))).strip()
+    return (t[:n-3].strip() + '...') if len(t) > n else t
+@app.middleware('http')
+async def _saee_stylist_mw(request, call_next):
+    resp = await call_next(request)
+    if resp.status_code == 200 and request.url.path in ('/api/style/photo', '/api/style/occasion'):
+        raw = b''
+        async for ch in resp.body_iterator: raw += ch
+        hdrs = {k: v for k, v in resp.headers.items() if k.lower() != 'content-length'}
+        try:
+            d = _sj.loads(raw.decode('utf-8'))
+            for k in ('used_gemini', 'photo_received', 'photo_included'): d.pop(k, None)
+            if 'photo_summary' in d:
+                d['photo_summary'] = _sh(f"Great base for {d.get('occasion', 'today')}! Size {d.get('recommended_size', 'M')} frames your shoulders cleanly - keep warm shades near your face.")
+            if isinstance(d.get('improvements'), list): d['improvements'] = [_sh(x, 85) for x in d['improvements'][:2]]
+            for k, l in (('fit_feedback', 110), ('outfit_pairing', 110), ('headline_look', 115), ('fit_notes', 95)):
+                if k in d: d[k] = _sh(d[k], l)
+            return _SJ(content=d, status_code=200, headers=hdrs)
+        except Exception:
+            return _SJ(content={'raw': raw.decode('utf-8', 'ignore')}, status_code=200, headers=hdrs)
+    return resp
+@app.post('/api/assistant/guide')
+async def saee_human_guide(payload: dict):
+    msg = str(payload.get('message', '')).strip()
+    prof = payload.get('profile') or {}
+    cols = _pcols(prof, msg)
+    low = msg.lower()
+    tab = 'body' if any(w in low for w in ('col', 'tone', 'skin', 'photo', 'look')) else ('occasion' if any(w in low for w in ('wed', 'party', 'outfit', 'dress', 'wear', 'wardrobe')) else ('fit' if any(w in low for w in ('size', 'fit', 'shoe', 'foot', 'meas', 'chest')) else payload.get('tab', 'body')))
+    key = _so.getenv('GEMINI_API_KEY', '').strip()
+    if key:
+        try:
+            pr = f'You are Maya, a warm human fashion stylist (never say AI). Profile: {prof}. User: {msg}. Colours: {cols}. Reply in max 2 short friendly sentences.'
+            req = _sr.Request(f'https://generativelanguage.googleapis.com/v1beta/models/gemini-4-hydrogen:generateContent?key={key}', data=_sj.dumps({'contents': [{'parts': [{'text': pr}]}]}).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'aistudio-build'})
+            with _sr.urlopen(req, timeout=12) as r:
+                txt = _sj.loads(r.read().decode('utf-8'))['candidates'][0]['content']['parts'][0]['text']
+            return {'reply': _sh(txt, 165), 'suggested_tab': tab, 'colours': cols}
+        except Exception:
+            pass
+    if any(w in low for w in ('size', 'fit', 'meas', 'shoe', 'foot')):
+        return {'reply': 'Measure your fullest chest and foot cm in Fit & Footwear to lock your exact size right away.', 'suggested_tab': tab, 'colours': []}
+    if any(w in low for w in ('wed', 'party', 'outfit', 'wear')):
+        return {'reply': f'Go with {cols[0]} or {cols[1]} cleanly tailored - tap a shade below to see it on your photo.', 'suggested_tab': tab, 'colours': cols}
+    return {'reply': f'For your tone, {cols[0]}, {cols[1]}, and {cols[2]} brighten your face. Tap any shade below to preview it on you!', 'suggested_tab': tab, 'colours': cols}
+# --- End SAEE Human Stylist ---

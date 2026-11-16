@@ -139,7 +139,7 @@ export function StyleStudio({
     <>
       <div className="grid-2">
         <div className="card">
-          <h3>Occasion Styling AI</h3>
+          <h3>Occasion Styling</h3>
           <p className="muted">
             Select an occasion and optionally attach a photo for personalised looks.
           </p>
