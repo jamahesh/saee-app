@@ -1,3 +1,4 @@
+import { GuideAssistant } from "./components/GuideAssistant";
 import { useEffect, useState } from "react";
 import { apiFetch } from "./api";
 import { AdsAndPlans } from "./components/AdsAndPlans";
@@ -141,6 +142,8 @@ export default function App() {
       )}
 
       {isAdFree && <div className="notice ok" style={{ marginTop: 22 }}>Studio Family (₹499/mo) Ad-Free Editorial Mode Active.</div>}
-    </div>
+    
+      <GuideAssistant tab={tab} profile={profile} onNavigate={setTab} />
+</div>
   );
 }

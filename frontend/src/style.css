@@ -120,3 +120,14 @@ button, input, select, textarea { font: inherit; }
 .wardrobe-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 @media (max-width: 640px) { .wardrobe-list { grid-template-columns: 1fr; } }
 .wardrobe-item { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+
+.guide-fab{position:fixed;right:20px;bottom:20px;z-index:60;background:var(--accent);color:#fff;border:none;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+.guide-panel{position:fixed;right:20px;bottom:74px;z-index:60;width:min(370px,calc(100vw - 24px));max-height:74vh;display:flex;flex-direction:column;gap:10px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.guide-head{display:flex;justify-content:space-between;align-items:center}
+.guide-chips{display:flex;flex-wrap:wrap;gap:6px}
+.guide-msgs{overflow-y:auto;display:flex;flex-direction:column;gap:8px;max-height:38vh;padding-right:4px}
+.guide-msg{padding:10px 12px;border-radius:12px;font-size:0.9rem;line-height:1.4;border:1px solid var(--border)}
+.guide-msg.user{align-self:flex-end;background:var(--active-bg);color:var(--active-ink)}
+.guide-msg.bot{align-self:flex-start;background:var(--input-bg)}
+.guide-form{display:flex;gap:8px}
+.guide-form input{flex:1}

@@ -334,3 +334,33 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str = Header(
             if order:
                 _activate_paid_order(db, order, payment_id, x_razorpay_signature, "webhook")
     return {"received": True}
+
+import os as _os,json as _json,urllib.request as _ur
+from fastapi import Body as _Body
+@app.post("/api/assistant/guide")
+def assistant_guide(payload:dict=_Body(...)):
+ msg=str(payload.get("message") or "").strip();tab=str(payload.get("tab") or "fit")
+ prof=payload.get("profile") or {};hist=payload.get("history") or [];low=msg.lower();sug=None
+ if any(k in low for k in ("size","chest","waist","measur","shoe","foot","fit")):sug="fit"
+ elif any(k in low for k in ("skin","tone","colou","color","photo","undertone","profile")):sug="body"
+ elif any(k in low for k in ("occasion","wedding","party","wardrobe","couple","family","outfit")):sug="occasion"
+ elif any(k in low for k in ("ad","brand","partner","campaign")):sug="ads"
+ key=(_os.getenv("GEMINI_API_KEY") or "").strip()
+ if key and msg:
+  try:
+   st="You are SAEE AI Style Guide. Tabs: fit (Fit & Footwear), body (Body & Colour + Photo), occasion (Occasion AI & Wardrobe), ads (Partner Brand Ads). Tab: "+tab+". Profile: "+_json.dumps(prof)[:400]+". Give concise step-by-step guidance."
+   ts=[{"role":"user" if h.get("role")=="user" else "model","parts":[{"text":str(h.get("text") or "")[:300]}]} for h in hist[-6:]]+[{"role":"user","parts":[{"text":msg}]}]
+   rb=_json.dumps({"systemInstruction":{"parts":[{"text":st}]},"contents":ts}).encode()
+   rq=_ur.Request("https://generativelanguage.googleapis.com/v1beta/models/gemini-4-hydrogen:generateContent?key="+key,data=rb,headers={"Content-Type":"application/json","User-Agent":"aistudio-build"})
+   with _ur.urlopen(rq,timeout=15) as r:
+    tx=_json.loads(r.read().decode())["candidates"][0]["content"]["parts"][0]["text"].strip()
+    if tx:return {"reply":tx,"suggested_tab":sug}
+  except Exception:pass
+ col=prof.get("body_colour") or "your skin tone";und=prof.get("undertone") or "Warm"
+ ch=prof.get("chest_cm") or 100;wa=prof.get("waist_cm") or 88;ft=prof.get("foot_length_cm") or 26.5
+ if sug=="fit":rep=f"Measure fullest chest ({ch} cm), natural waist ({wa} cm), and standing heel-to-toe foot ({ft} cm), then click Calculate in Fit & Footwear."
+ elif sug=="body":rep=f"Saved tone: {col} ({und}). Open Body & Colour + Photo to update measurements, run Skin Tone Colour Analysis, or upload a photo for Photo AI."
+ elif sug=="occasion":rep="Open Occasion AI & Wardrobe to save outfits in Digital Wardrobe, build event looks, or match couple and family outfits."
+ elif sug=="ads":rep="Open Partner Brand Ads to view featured brand campaigns or publish a new partner campaign."
+ else:rep="Quick SAEE guide: 1) Fit & Footwear for clothing & shoe sizes. 2) Body & Colour + Photo for skin-tone colours & photo advice. 3) Occasion AI & Wardrobe for event & couple/family looks."
+ return {"reply":rep,"suggested_tab":sug}
