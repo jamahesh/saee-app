@@ -1,15 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+const SIMPLE_NAMES: [string, string][] = [
+  ['olive moss', 'Olive Green'],
+  ['terracotta rust', 'Rust Red'],
+  ['terracotta', 'Rust Red'],
+  ['warm ivory', 'Cream White'],
+  ['mustard ochre', 'Mustard Yellow'],
+  ['espresso brown', 'Dark Brown'],
+  ['sage green', 'Light Green'],
+  ['camel beige', 'Light Brown'],
+  ['crisp white', 'White'],
+  ['burgundy', 'Maroon'],
+  ['emerald', 'Dark Green'],
+  ['navy blue', 'Dark Blue'],
+  ['navy', 'Dark Blue'],
+  ['charcoal', 'Dark Grey'],
+  ['cobalt', 'Bright Blue'],
+  ['blush', 'Light Pink'],
+  ['icy neon pink', 'Bright Pink'],
+  ['stark cool blue-grey', 'Dull Grey-Blue']
+];
+
 const H: Record<string, [number, number, number]> = {
-  olive: [85, 107, 47], moss: [74, 93, 35], terracotta: [192, 86, 59], rust: [166, 75, 42],
-  ivory: [237, 230, 214], cream: [239, 230, 213], mustard: [199, 147, 37], ochre: [186, 133, 35],
-  espresso: [74, 50, 34], brown: [92, 61, 46], emerald: [30, 107, 82], navy: [31, 48, 94],
-  burgundy: [110, 30, 51], wine: [102, 30, 49], cobalt: [34, 76, 152], coral: [217, 107, 82],
-  blush: [223, 168, 163], sage: [126, 150, 126], teal: [29, 107, 107], plum: [94, 43, 87],
-  charcoal: [54, 57, 63], black: [28, 29, 32], white: [244, 244, 240], beige: [200, 184, 154],
-  camel: [181, 137, 90], gold: [201, 158, 50], amber: [200, 125, 32], peach: [232, 165, 135],
-  lavender: [155, 137, 179], maroon: [107, 29, 47], sand: [205, 184, 157], rose: [196, 108, 123],
-  denim: [55, 91, 138], khaki: [163, 145, 97], taupe: [122, 107, 93], copper: [184, 107, 67]
+  'olive green': [85, 107, 47], 'olive': [85, 107, 47], 'rust red': [182, 74, 52], 'rust': [182, 74, 52],
+  'cream white': [238, 232, 216], 'cream': [238, 232, 216], 'mustard yellow': [205, 152, 36], 'mustard': [205, 152, 36],
+  'yellow': [224, 182, 48], 'dark brown': [78, 52, 36], 'light brown': [175, 134, 92], 'brown': [105, 68, 46],
+  'dark green': [28, 105, 78], 'light green': [126, 158, 126], 'green': [46, 128, 78],
+  'dark blue': [30, 52, 102], 'sky blue': [92, 162, 218], 'bright blue': [38, 88, 178], 'blue': [48, 96, 168],
+  'maroon': [114, 30, 52], 'red': [182, 46, 48], 'light pink': [224, 168, 172], 'pink': [214, 108, 138],
+  'peach': [232, 165, 135], 'purple': [112, 64, 136], 'orange': [218, 114, 54],
+  'dark grey': [64, 68, 74], 'grey': [128, 132, 138], 'black': [30, 32, 36], 'white': [242, 242, 238], 'beige': [205, 188, 158]
 };
 
 export type OutfitMatch = {
@@ -20,8 +40,23 @@ export type OutfitMatch = {
   pieces: string;
 };
 
+export function toSimpleText(s: string): string {
+  let out = s;
+  for (const [f, simple] of SIMPLE_NAMES) {
+    out = out.replace(new RegExp(f, 'gi'), simple);
+  }
+  return out
+    .replace(/tapered trousers/gi, 'slim pants')
+    .replace(/structured overshirt/gi, 'smart shirt')
+    .replace(/raw linen/gi, 'light linen')
+    .replace(/cotton twill/gi, 'soft cotton')
+    .replace(/silk chanderi/gi, 'light silk')
+    .replace(/brushed gold/gi, 'gold')
+    .replace(/antique brass/gi, 'gold');
+}
+
 export function pickRgb(n: string): [number, number, number] {
-  const l = n.toLowerCase();
+  const l = toSimpleText(n).toLowerCase();
   for (const [k, v] of Object.entries(H)) if (l.includes(k)) return v;
   return [79, 98, 114];
 }
@@ -33,16 +68,17 @@ export function pickHex(n: string): string {
 
 export function extractColours(d: Record<string, unknown>): string[] {
   const o: string[] = [];
-  const add = (v: string) => { const t = v.trim(); if (t && t.length < 28 && !o.includes(t)) o.push(t); };
+  const add = (v: string) => { const t = toSimpleText(v).trim(); if (t && t.length < 28 && !o.includes(t)) o.push(t); };
   for (const k of ['best_colours', 'colour_story', 'colours', 'recommended_colours', 'suggested_colours']) {
     const v = d[k]; if (Array.isArray(v)) v.forEach((x) => typeof x === 'string' && add(x));
   }
   if (!o.length) {
     const txt = [d.colour_harmony, d.headline_look, d.outfit_pairing, d.palette].filter((x) => typeof x === 'string').join(' ');
     for (const p of txt.split(/[,;.]/)) {
-      const l = p.toLowerCase();
+      const sp = toSimpleText(p);
+      const l = sp.toLowerCase();
       if (Object.keys(H).some((k) => l.includes(k))) {
-        const c = p.replace(/^.*?(?:tones|you|palette|anchor|with|colours?)[: ]+/i, '').trim();
+        const c = sp.replace(/^.*?(?:tones|you|palette|anchor|with|colours?)[: ]+/i, '').trim();
         if (c.length >= 3 && c.length <= 26) add(c);
       }
     }
@@ -52,17 +88,21 @@ export function extractColours(d: Record<string, unknown>): string[] {
 
 export function buildOutfitMatches(d: Record<string, unknown>, cols: string[]): OutfitMatch[] {
   if (Array.isArray(d.outfit_matches) && d.outfit_matches.length) {
-    return (d.outfit_matches as OutfitMatch[]).slice(0, 4);
+    return (d.outfit_matches as OutfitMatch[]).slice(0, 4).map((o) => ({
+      ...o,
+      name: toSimpleText(o.name),
+      colour: toSimpleText(o.colour),
+      why: toSimpleText(o.why),
+      pieces: toSimpleText(o.pieces)
+    }));
   }
-  const c0 = cols[0] || 'Olive Moss';
-  const c1 = cols[1] || 'Terracotta Rust';
-  const c2 = cols[2] || 'Warm Ivory';
-  const sz = typeof d.recommended_size === 'string' ? d.recommended_size : 'tailored fit';
-  const occ = typeof d.occasion === 'string' ? d.occasion : 'everyday & event';
+  const c0 = cols[0] || 'Olive Green';
+  const c1 = cols[1] || 'Rust Red';
+  const c2 = cols[2] || 'Cream White';
   return [
-    { name: 'Structured Shirt / Kurta Look', colour: c0, score: 96, why: 'Top tone harmony + crisp ' + sz + ' cut for ' + occ, pieces: c0 + ' top + Warm Ivory trousers + clean loafers' },
-    { name: 'Smart Textured Layer Set', colour: c1, score: 91, why: 'Rich contrast with natural skin brightness', pieces: c1 + ' overshirt/dress + Espresso belt & watch' },
-    { name: 'Relaxed Neutral Base', colour: c2, score: 85, why: 'Balanced minimal contrast, easy to accessorise', pieces: c2 + ' linen set + brushed gold accent' }
+    { name: 'Shirt & Clean Pants', colour: c0, score: 97, why: 'Suits your skin colour well for daily wear.', pieces: c0 + ' shirt + Cream White pants' },
+    { name: 'Smart Jacket / Kurta Set', colour: c1, score: 92, why: 'Looks bright and fresh in photos and events.', pieces: c1 + ' kurta or top + Dark Brown belt' },
+    { name: 'Simple Everyday T-Shirt & Jeans', colour: c2, score: 86, why: 'Easy casual outfit that pairs with blue jeans.', pieces: c2 + ' tee or top + dark blue jeans' }
   ];
 }
 
@@ -103,7 +143,6 @@ function recolourDressOnCanvas(photoUrl: string, targetRgb: [number, number, num
       ctx.drawImage(img, 0, 0, w, h);
       const id = ctx.getImageData(0, 0, w, h);
       const d = id.data;
-
       let br = 0, bg = 0, bb = 0, bc = 0;
       for (let y = 0; y < Math.floor(h * 0.5); y += 4) {
         for (const x of [2, w - 3]) {
@@ -112,7 +151,6 @@ function recolourDressOnCanvas(photoUrl: string, targetRgb: [number, number, num
         }
       }
       if (bc) { br /= bc; bg /= bc; bb /= bc; }
-
       const sx = Math.max(10, Math.min(w - 11, Math.round(seed[0] * w)));
       const sy = Math.max(Math.round(h * 0.25), Math.min(h - 11, Math.round(seed[1] * h)));
       let sr = 0, sg = 0, sb = 0, sc = 0;
@@ -129,7 +167,6 @@ function recolourDressOnCanvas(photoUrl: string, targetRgb: [number, number, num
       }
       sr /= sc; sg /= sc; sb /= sc;
       const seedLum = Math.max(0.14, (0.299 * sr + 0.587 * sg + 0.114 * sb) / 255);
-
       const mask = new Float32Array(w * h);
       const vis = new Uint8Array(w * h);
       const q = new Int32Array(w * h);
@@ -143,7 +180,6 @@ function recolourDressOnCanvas(photoUrl: string, targetRgb: [number, number, num
         vis[idx] = 1; q[qt++] = idx;
       };
       for (let dy = -10; dy <= 10; dy += 5) for (let dx = -10; dx <= 10; dx += 5) pushSeed(sx + dx, sy + dy);
-
       const maxColDist = 78;
       const minY = Math.round(h * 0.24);
       while (qh < qt) {
@@ -162,7 +198,6 @@ function recolourDressOnCanvas(photoUrl: string, targetRgb: [number, number, num
         if (cy > minY && !vis[cur - w]) { vis[cur - w] = 1; q[qt++] = cur - w; }
         if (cy < h - 2 && !vis[cur + w]) { vis[cur + w] = 1; q[qt++] = cur + w; }
       }
-
       const [tr, tg, tb] = targetRgb;
       for (let p = 0; p < w * h; p++) {
         const a = mask[p];
@@ -235,7 +270,7 @@ export function ColourLookPreview({ colours, outfits = [], compact = false }: { 
         <div style={{ display: 'flex', gap: 6 }}>
           {photo && (
             <button type='button' className='look-upload' onClick={() => setShowOrig((v) => !v)}>
-              {showOrig ? 'Show Styled' : 'Original'}
+              {showOrig ? 'Show New Colour' : 'Original'}
             </button>
           )}
           <label className='look-upload'>
@@ -263,21 +298,21 @@ export function ColourLookPreview({ colours, outfits = [], compact = false }: { 
             alt={'Your dress in ' + active}
             className='look-img'
             onClick={onTapStage}
-            title='Tap directly on your shirt/dress to pinpoint fabric'
+            title='Tap directly on your shirt or dress'
           />
           <div className='look-badge'>
             <span className='swatch-dot' style={{ background: pickHex(active) }} />
             <span>{showOrig ? 'Original Photo' : 'Dress in ' + active}</span>
           </div>
-          <span className='look-hint'>Tap dress to adjust</span>
+          <span className='look-hint'>Tap dress to aim colour</span>
         </div>
       ) : (
-        <label className='look-empty'>Upload your photo to change your dress colour to {active}<input type='file' accept='image/*' hidden onChange={onPick} /></label>
+        <label className='look-empty'>Upload your photo to see {active} on your dress or shirt<input type='file' accept='image/*' hidden onChange={onPick} /></label>
       )}
 
       {outfits.length > 0 && (
         <div className='outfit-match-list'>
-          <div className='outfit-match-head'>Best Matching Outfits & Score</div>
+          <div className='outfit-match-head'>Daily Outfits & Match Score</div>
           {outfits.map((o, i) => (
             <button
               key={o.name + i}
@@ -286,7 +321,7 @@ export function ColourLookPreview({ colours, outfits = [], compact = false }: { 
               onClick={() => { setSelCol(o.colour); setShowOrig(false); }}
             >
               <div className='outfit-match-top'>
-                <span><strong>{i === 0 ? 'Top Pick: ' : ''}{o.name}</strong></span>
+                <span><strong>{i === 0 ? 'Best Pick: ' : ''}{o.name}</strong></span>
                 <span className={i === 0 ? 'match-score best' : 'match-score'}>{o.score}% Match</span>
               </div>
               <div className='match-bar'><div className='match-fill' style={{ width: o.score + '%', background: pickHex(o.colour) }} /></div>
@@ -294,7 +329,7 @@ export function ColourLookPreview({ colours, outfits = [], compact = false }: { 
               {!compact && <div className='outfit-match-why'>{o.why}</div>}
             </button>
           ))}
-          {bestOutfit && <div className='outfit-best-note'>Perfect match for you: <strong>{bestOutfit.name}</strong> in <strong>{bestOutfit.colour}</strong> ({bestOutfit.score}%).</div>}
+          {bestOutfit && <div className='outfit-best-note'>Best daily match for you: <strong>{bestOutfit.name}</strong> in <strong>{bestOutfit.colour}</strong> ({bestOutfit.score}%).</div>}
         </div>
       )}
     </div>

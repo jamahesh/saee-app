@@ -5,13 +5,13 @@ import { ColourLookPreview, OutfitMatch } from './ColourLookPreview';
 type NavTab = 'fit' | 'body' | 'occasion' | 'ads';
 type Msg = { role: 'user' | 'bot'; text: string; tab?: string; colours?: string[]; outfits?: OutfitMatch[] };
 const TL: Record<string, string> = { fit: 'Fit & Sizing', body: 'Body & Colour', occasion: 'Occasions & Wardrobe', ads: 'Partner Brand Ads' };
-const Q = ['Best outfits & score for me', 'Wedding look', 'Best colours on me', 'Quick size tip'];
+const Q = ['Best daily colours', 'Best outfit score', 'Wedding outfit', 'What size am I?'];
 
 export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; profile: object; onNavigate: (t: NavTab) => void }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: "Hey! I'm Maya, your SAEE stylist. Ask which colours and outfits match you best." }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: "Hi! I'm Maya. Ask me in simple words which daily colours or outfits suit you best." }]);
 
   async function ask(q: string) {
     const clean = q.trim(); if (!clean || busy) return;
@@ -23,7 +23,7 @@ export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; prof
       });
       setMsgs([...next, { role: 'bot', text: r.reply, tab: r.suggested_tab, colours: r.colours || [], outfits: r.outfits || [] }]);
     } catch {
-      setMsgs([...next, { role: 'bot', text: 'Olive Moss tailored shirt + ivory trousers scores 96% for your tone. Tap a swatch to try it on your photo!', tab: 'body', colours: ['Olive Moss', 'Terracotta Rust', 'Warm Ivory'] }]);
+      setMsgs([...next, { role: 'bot', text: 'Olive Green shirt with Cream White pants matches you best (97%). Tap a shade to try it!', tab: 'body', colours: ['Olive Green', 'Rust Red', 'Cream White'] }]);
     } finally { setBusy(false); }
   }
 
@@ -34,7 +34,7 @@ export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; prof
       <button type='button' className='guide-fab' onClick={() => setOpen((v) => !v)}>{open ? 'Close Stylist' : 'Ask Maya - Stylist'}</button>
       {open && (
         <aside className='guide-panel' aria-label='Personal Stylist Maya'>
-          <div className='guide-head'><strong>Maya - Personal Stylist</strong><button type='button' className='btn-secondary' onClick={() => setOpen(false)}>Close</button></div>
+          <div className='guide-head'><strong>Maya - Your Stylist</strong><button type='button' className='btn-secondary' onClick={() => setOpen(false)}>Close</button></div>
           <div className='guide-chips'>{Q.map((q) => <button key={q} type='button' className='chip' onClick={() => void ask(q)}>{q}</button>)}</div>
           <div className='guide-msgs'>
             {msgs.map((m, i) => (
@@ -47,7 +47,7 @@ export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; prof
               </div>
             ))}
           </div>
-          <form className='guide-form' onSubmit={onSub}><input value={input} onChange={(e) => setInput(e.target.value)} placeholder='Ask Maya for outfit match & score...' /><button type='submit' className='btn-primary' disabled={busy}>{busy ? '...' : 'Send'}</button></form>
+          <form className='guide-form' onSubmit={onSub}><input value={input} onChange={(e) => setInput(e.target.value)} placeholder='Ask Maya in simple words...' /><button type='submit' className='btn-primary' disabled={busy}>{busy ? '...' : 'Send'}</button></form>
         </aside>
       )}
     </>

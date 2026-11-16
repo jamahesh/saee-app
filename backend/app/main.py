@@ -341,40 +341,62 @@ from fastapi import Body as _Body
 # --- SAEE Human Stylist ---
 import json as _sj, urllib.request as _sr, os as _so, re as _sre
 from fastapi.responses import JSONResponse as _SJ
-_TC = {'warm': ['Olive Moss', 'Terracotta Rust', 'Warm Ivory', 'Mustard Ochre'], 'cool': ['Navy Blue', 'Emerald', 'Burgundy', 'Crisp White'], 'neutral': ['Sage Green', 'Camel Beige', 'Charcoal', 'Espresso Brown']}
+
+_SIMPLE_MAP = (
+    ('Olive Moss', 'Olive Green'), ('Terracotta Rust', 'Rust Red'), ('Terracotta', 'Rust Red'),
+    ('Warm Ivory', 'Cream White'), ('Mustard Ochre', 'Mustard Yellow'), ('Espresso Brown', 'Dark Brown'),
+    ('Sage Green', 'Light Green'), ('Camel Beige', 'Light Brown'), ('Crisp White', 'White'),
+    ('Burgundy', 'Maroon'), ('Emerald', 'Dark Green'), ('Navy Blue', 'Dark Blue'),
+    ('Icy Neon Pink', 'Bright Pink'), ('Stark Cool Blue-Grey', 'Dull Grey-Blue'),
+    ('Raw Linen', 'Light Linen'), ('Cotton Twill', 'Soft Cotton'), ('Silk Chanderi', 'Light Silk'),
+    ('Brushed Gold', 'Gold'), ('Antique Brass', 'Light Gold'), ('tapered trousers', 'slim pants'),
+    ('structured overshirt', 'smart shirt')
+)
+_TC = {'warm': ['Olive Green', 'Rust Red', 'Cream White', 'Mustard Yellow'], 'cool': ['Dark Blue', 'Dark Green', 'Maroon', 'White'], 'neutral': ['Light Green', 'Light Brown', 'Dark Grey', 'Dark Brown']}
+
+def _simp(v):
+    if isinstance(v, list): return [_simp(x) for x in v]
+    if isinstance(v, dict): return {k: _simp(val) for k, val in v.items()}
+    if isinstance(v, str):
+        t = v
+        for a, b in _SIMPLE_MAP: t = _sre.sub(_sre.escape(a), b, t, flags=_sre.I)
+        return t
+    return v
+
 def _pcols(prof, msg=''):
     u, m = str((prof or {}).get('undertone', 'warm')).lower(), msg.lower()
     if any(w in m for w in ('wed', 'fest', 'party')):
-        return ['Burgundy', 'Navy Blue', 'Emerald', 'Warm Ivory'] if 'cool' in u else ['Emerald', 'Mustard Ochre', 'Burgundy', 'Warm Ivory']
+        return ['Maroon', 'Dark Blue', 'Dark Green', 'Cream White'] if 'cool' in u else ['Dark Green', 'Mustard Yellow', 'Maroon', 'Cream White']
     return next((v for k, v in _TC.items() if k in u), _TC['warm'])
-def _score_outfits(prof, cols, occ='Everyday'):
-    fit = str((prof or {}).get('fit_preference', 'regular')).title()
-    ut = str((prof or {}).get('undertone', 'Warm')).title()
-    c0, c1, c2 = cols[0], cols[1], cols[2] if len(cols) > 2 else 'Warm Ivory'
+
+def _score_outfits(prof, cols, occ='Daily Use'):
+    c0, c1, c2 = cols[0], cols[1], cols[2] if len(cols) > 2 else 'Cream White'
     return [
-        {'name': f'Tailored {fit} Shirt & Tapered Trousers', 'colour': c0, 'score': 97, 'why': f'Top tone match for {ut} undertone + sharp shoulder line for {occ}.', 'pieces': f'{c0} structured top + clean ivory trousers + tailored belt & crisp watch'},
-        {'name': 'Textured Overshirt / Midi Dress Set', 'colour': c1, 'score': 92, 'why': f'Balances mid-contrast framing cleanly in {occ} light.', 'pieces': f'{c1} main piece + minimal metal watch & tailored collar'},
-        {'name': 'Relaxed Linen Monochrome Look', 'colour': c2, 'score': 86, 'why': 'Soft timeless option that pairs effortlessly with minimal accessories.', 'pieces': f'{c2} breathable layer + neutral bottom'}
+        {'name': 'Shirt & Clean Pants', 'colour': c0, 'score': 97, 'why': f'Suits your skin colour well and looks neat for {occ}.', 'pieces': f'{c0} shirt + Cream White pants'},
+        {'name': 'Smart Jacket / Kurta Set', 'colour': c1, 'score': 92, 'why': 'Looks bright and fresh in daily light and outings.', 'pieces': f'{c1} kurta or top + Dark Brown belt'},
+        {'name': 'Simple T-Shirt & Jeans', 'colour': c2, 'score': 86, 'why': 'Easy everyday outfit that goes well with blue jeans.', 'pieces': f'{c2} tee or top + dark blue jeans'}
     ]
+
 def _sh(s, n=140):
-    t = _sre.sub(r'\s+', ' ', _sre.sub(r'Add GEMINI_API_KEY[^.]*[.]?', '', str(s or ''))).strip()
+    t = _sre.sub(r'\s+', ' ', _sre.sub(r'Add GEMINI_API_KEY[^.]*[.]?', '', str(_simp(s) or ''))).strip()
     return (t[:n-3].strip() + '...') if len(t) > n else t
+
 @app.middleware('http')
 async def _saee_stylist_mw(request, call_next):
     resp = await call_next(request)
-    if resp.status_code == 200 and request.url.path in ('/api/style/photo', '/api/style/occasion'):
+    if resp.status_code == 200 and request.url.path in ('/api/style/photo', '/api/style/occasion', '/api/style/colour'):
         raw = b''
         async for ch in resp.body_iterator: raw += ch
         hdrs = {k: v for k, v in resp.headers.items() if k.lower() != 'content-length'}
         try:
-            d = _sj.loads(raw.decode('utf-8'))
+            d = _simp(_sj.loads(raw.decode('utf-8')))
             for k in ('used_gemini', 'photo_received', 'photo_included', 'footwear'): d.pop(k, None)
-            occ = str(d.get('occasion', 'today'))
-            cols = d.get('colour_story') or ['Olive Moss', 'Terracotta Rust', 'Warm Ivory']
+            occ = str(d.get('occasion', 'daily wear'))
+            cols = d.get('best_colours') or d.get('colour_story') or ['Olive Green', 'Rust Red', 'Cream White']
             if isinstance(cols, list) and cols:
                 d['outfit_matches'] = _score_outfits({}, [str(x) for x in cols], occ)
             if 'photo_summary' in d:
-                d['photo_summary'] = _sh(f"Great base for {occ}! Top match scores 97% in {cols[0]} - tap swatches below to change your dress colour.")
+                d['photo_summary'] = _sh(f'Nice look for {occ}! Best match is 97% in {cols[0]} - tap colours below to see it on your dress.')
             if isinstance(d.get('improvements'), list): d['improvements'] = [_sh(x, 85) for x in d['improvements'][:2]]
             for k, l in (('fit_feedback', 110), ('outfit_pairing', 110), ('headline_look', 115), ('fit_notes', 95)):
                 if k in d: d[k] = _sh(d[k], l)
@@ -382,19 +404,20 @@ async def _saee_stylist_mw(request, call_next):
         except Exception:
             return _SJ(content={'raw': raw.decode('utf-8', 'ignore')}, status_code=200, headers=hdrs)
     return resp
+
 @app.post('/api/assistant/guide')
 async def saee_human_guide(payload: dict):
     msg = str(payload.get('message', '')).strip()
     prof = payload.get('profile') or {}
     cols = _pcols(prof, msg)
     low = msg.lower()
-    occ = 'Wedding / Festive' if any(w in low for w in ('wed', 'fest', 'party')) else 'Daily & Casual'
+    occ = 'weddings & parties' if any(w in low for w in ('wed', 'fest', 'party')) else 'daily wear'
     outfits = _score_outfits(prof, cols, occ)
-    tab = 'body' if any(w in low for w in ('col', 'tone', 'skin', 'photo', 'look')) else ('occasion' if any(w in low for w in ('wed', 'party', 'outfit', 'dress', 'wear', 'wardrobe')) else ('fit' if any(w in low for w in ('size', 'fit', 'shoe', 'foot', 'meas', 'chest')) else payload.get('tab', 'body')))
+    tab = 'body' if any(w in low for w in ('col', 'tone', 'skin', 'photo', 'look')) else ('occasion' if any(w in low for w in ('wed', 'party', 'outfit', 'dress', 'wear', 'wardrobe')) else ('fit' if any(w in low for w in ('size', 'fit', 'meas', 'chest', 'waist')) else payload.get('tab', 'body')))
     key = _so.getenv('GEMINI_API_KEY', '').strip()
     if key:
         try:
-            pr = f'You are Maya, a warm human fashion stylist (never say AI). Profile: {prof}. User: {msg}. Top outfit: {outfits[0]}. Reply in max 2 short friendly sentences.'
+            pr = f'You are Maya, a warm human stylist. Always use simple daily colour names like Olive Green, Rust Red, Cream White, Maroon, Dark Blue (no fancy words). Profile: {prof}. User asks: {msg}. Top outfit: {outfits[0]}. Reply in 1-2 short everyday sentences.'
             req = _sr.Request(f'https://generativelanguage.googleapis.com/v1beta/models/gemini-4-hydrogen:generateContent?key={key}', data=_sj.dumps({'contents': [{'parts': [{'text': pr}]}]}).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'aistudio-build'})
             with _sr.urlopen(req, timeout=12) as r:
                 txt = _sj.loads(r.read().decode('utf-8'))['candidates'][0]['content']['parts'][0]['text']
@@ -402,6 +425,6 @@ async def saee_human_guide(payload: dict):
         except Exception:
             pass
     if any(w in low for w in ('size', 'fit', 'meas', 'chest', 'waist')):
-        return {'reply': 'Measure your chest and waist cm in Fit & Sizing to get your exact garment size right away.', 'suggested_tab': tab, 'colours': [], 'outfits': []}
-    return {'reply': f"Top match: {outfits[0]['name']} in {outfits[0]['colour']} ({outfits[0]['score']}%). Tap any shade below to change your dress colour!", 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
+        return {'reply': 'Enter your chest and waist cm in Fit & Sizing to get your exact clothing size.', 'suggested_tab': tab, 'colours': [], 'outfits': []}
+    return {'reply': f"Best daily colours for you: {cols[0]}, {cols[1]}, and {cols[2]}. Your top outfit ({outfits[0]['name']}) scores {outfits[0]['score']}% - tap a colour below to see it on your dress!", 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
 # --- End SAEE Human Stylist ---

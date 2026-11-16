@@ -45,7 +45,7 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
       );
       setResult(rec);
     } catch (err) {
-      onMessage('err', err instanceof Error ? err.message : 'Could not calculate clothing size.');
+      onMessage('err', err instanceof Error ? err.message : 'Could not get your clothing size.');
     } finally {
       setBusy(false);
     }
@@ -53,8 +53,8 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
 
   return (
     <div className='card'>
-      <h2>Clothing Size Engine</h2>
-      <p className='muted'>Verified multi-measurement garment sizing tailored to your chest, waist, and fit preference.</p>
+      <h2>Clothing Size Finder</h2>
+      <p className='muted'>Enter your chest and waist size to get the right everyday shirt or trouser fit.</p>
       <form onSubmit={onCalc}>
         <div className='form-grid'>
           <div className='field'>
@@ -67,26 +67,26 @@ export function FitPanel({ user, profile, onMessage, onGoPlans }: Props) {
           </div>
         </div>
         <div className='field'>
-          <label>Fit Preference</label>
+          <label>Fit Style</label>
           <select value={fitPref} onChange={(e) => setFitPref(e.target.value)}>
-            <option value='slim'>Slim</option>
-            <option value='regular'>Regular</option>
-            <option value='relaxed'>Relaxed</option>
+            <option value='slim'>Slim Fit</option>
+            <option value='regular'>Regular Fit</option>
+            <option value='relaxed'>Loose / Relaxed</option>
           </select>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button type='submit' className='btn-primary' disabled={busy || !hasPlan}>
-            {hasPlan ? 'Calculate Clothing Size' : 'Loading...'}
+            {hasPlan ? 'Check My Size' : 'Loading...'}
           </button>
           <button type='button' className='btn-secondary' disabled={!hasPlan} onClick={() => { setChest(String(profile.chest_cm || 100)); setWaist(String(profile.waist_cm || 88)); setFitPref(profile.fit_preference || 'regular'); }}>
-            Use Saved Profile
+            Use My Saved Size
           </button>
         </div>
       </form>
       {result && (
         <div className='result-box'>
-          <div className='big-size'>Size {result.best_size || 'N/A'}</div>
-          <div className='muted'>Alternative: {result.alternative_size || 'None'} - Confidence: {result.confidence || 'High'}</div>
+          <div className='big-size'>Your Size: {result.best_size || 'M'}</div>
+          <div className='muted'>Other close size: {result.alternative_size || 'None'} - Match: {result.confidence || 'High'}</div>
           {Array.isArray(result.explanation) && (
             <ul className='feature-list'>
               {result.explanation.map((line, i) => <li key={i}>{line}</li>)}
