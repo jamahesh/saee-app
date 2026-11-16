@@ -1,4 +1,4 @@
-import { ColourLookPreview, extractColours } from './ColourLookPreview';
+import { ColourLookPreview, extractColours, buildOutfitMatches } from './ColourLookPreview';
 import { useState } from "react";
 import { apiFetch } from "../api";
 
@@ -37,15 +37,16 @@ export async function fileToCompressedBase64(file: File): Promise<PhotoPayload> 
 export function SmartOutput({ title, data }: { title: string; data: any }) {
   if (!data) return null;
   const rec = data as Record<string, unknown>;
-  const hide = new Set(['used_gemini', 'photo_received', 'photo_included', 'chart_verified', 'confidence_note']);
+  const hide = new Set(['used_gemini', 'photo_received', 'photo_included', 'chart_verified', 'confidence_note', 'outfit_matches']);
   const cols = extractColours(rec);
+  const outfits = buildOutfitMatches(rec, cols);
   const sh = (v: string) => { const x = v.replace(/Add GEMINI_API_KEY[^.]*[.]?/gi, '').replace(/\s+/g, ' ').trim(); return x.length > 140 ? x.slice(0, 137).trim() + '...' : x; };
   const lb = (k: string) => k.replace(/_/g, ' ').split(' ').map((w) => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
   const rows = Object.entries(rec).filter(([k, v]) => !hide.has(k) && v !== null && v !== '' && v !== undefined).slice(0, 5);
   return (
     <div className='result-box'>
       <h4 style={{ margin: '0 0 8px' }}>{title}</h4>
-      <ColourLookPreview colours={cols} />
+      <ColourLookPreview colours={cols} outfits={outfits} />
       {rows.map(([k, v]) => Array.isArray(v) ? (
         <div key={k} style={{ marginBottom: 6 }}>
           <strong>{lb(k)}:</strong>

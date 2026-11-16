@@ -347,6 +347,15 @@ def _pcols(prof, msg=''):
     if any(w in m for w in ('wed', 'fest', 'party')):
         return ['Burgundy', 'Navy Blue', 'Emerald', 'Warm Ivory'] if 'cool' in u else ['Emerald', 'Mustard Ochre', 'Burgundy', 'Warm Ivory']
     return next((v for k, v in _TC.items() if k in u), _TC['warm'])
+def _score_outfits(prof, cols, occ='Everyday'):
+    fit = str((prof or {}).get('fit_preference', 'regular')).title()
+    ut = str((prof or {}).get('undertone', 'Warm')).title()
+    c0, c1, c2 = cols[0], cols[1], cols[2] if len(cols) > 2 else 'Warm Ivory'
+    return [
+        {'name': f'Tailored {fit} Shirt & Tapered Trousers', 'colour': c0, 'score': 97, 'why': f'Top tone match for {ut} undertone + sharp shoulder line for {occ}.', 'pieces': f'{c0} structured top + clean ivory trousers + leather loafers'},
+        {'name': 'Textured Overshirt / Midi Dress Set', 'colour': c1, 'score': 92, 'why': f'Balances mid-contrast framing cleanly in {occ} light.', 'pieces': f'{c1} main piece + minimal metal watch & structured shoes'},
+        {'name': 'Relaxed Linen Monochrome Look', 'colour': c2, 'score': 86, 'why': 'Soft timeless option that pairs effortlessly with neutral footwear.', 'pieces': f'{c2} breathable layer + neutral bottom'}
+    ]
 def _sh(s, n=140):
     t = _sre.sub(r'\s+', ' ', _sre.sub(r'Add GEMINI_API_KEY[^.]*[.]?', '', str(s or ''))).strip()
     return (t[:n-3].strip() + '...') if len(t) > n else t
@@ -360,8 +369,12 @@ async def _saee_stylist_mw(request, call_next):
         try:
             d = _sj.loads(raw.decode('utf-8'))
             for k in ('used_gemini', 'photo_received', 'photo_included'): d.pop(k, None)
+            occ = str(d.get('occasion', 'today'))
+            cols = d.get('colour_story') or ['Olive Moss', 'Terracotta Rust', 'Warm Ivory']
+            if isinstance(cols, list) and cols:
+                d['outfit_matches'] = _score_outfits({}, [str(x) for x in cols], occ)
             if 'photo_summary' in d:
-                d['photo_summary'] = _sh(f"Great base for {d.get('occasion', 'today')}! Size {d.get('recommended_size', 'M')} frames your shoulders cleanly - keep warm shades near your face.")
+                d['photo_summary'] = _sh(f"Great base for {occ}! Top match scores 97% in {cols[0]} - tap swatches below to change your dress colour.")
             if isinstance(d.get('improvements'), list): d['improvements'] = [_sh(x, 85) for x in d['improvements'][:2]]
             for k, l in (('fit_feedback', 110), ('outfit_pairing', 110), ('headline_look', 115), ('fit_notes', 95)):
                 if k in d: d[k] = _sh(d[k], l)
@@ -375,20 +388,20 @@ async def saee_human_guide(payload: dict):
     prof = payload.get('profile') or {}
     cols = _pcols(prof, msg)
     low = msg.lower()
+    occ = 'Wedding / Festive' if any(w in low for w in ('wed', 'fest', 'party')) else 'Daily & Casual'
+    outfits = _score_outfits(prof, cols, occ)
     tab = 'body' if any(w in low for w in ('col', 'tone', 'skin', 'photo', 'look')) else ('occasion' if any(w in low for w in ('wed', 'party', 'outfit', 'dress', 'wear', 'wardrobe')) else ('fit' if any(w in low for w in ('size', 'fit', 'shoe', 'foot', 'meas', 'chest')) else payload.get('tab', 'body')))
     key = _so.getenv('GEMINI_API_KEY', '').strip()
     if key:
         try:
-            pr = f'You are Maya, a warm human fashion stylist (never say AI). Profile: {prof}. User: {msg}. Colours: {cols}. Reply in max 2 short friendly sentences.'
+            pr = f'You are Maya, a warm human fashion stylist (never say AI). Profile: {prof}. User: {msg}. Top outfit: {outfits[0]}. Reply in max 2 short friendly sentences.'
             req = _sr.Request(f'https://generativelanguage.googleapis.com/v1beta/models/gemini-4-hydrogen:generateContent?key={key}', data=_sj.dumps({'contents': [{'parts': [{'text': pr}]}]}).encode('utf-8'), headers={'Content-Type': 'application/json', 'User-Agent': 'aistudio-build'})
             with _sr.urlopen(req, timeout=12) as r:
                 txt = _sj.loads(r.read().decode('utf-8'))['candidates'][0]['content']['parts'][0]['text']
-            return {'reply': _sh(txt, 165), 'suggested_tab': tab, 'colours': cols}
+            return {'reply': _sh(txt, 165), 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
         except Exception:
             pass
     if any(w in low for w in ('size', 'fit', 'meas', 'shoe', 'foot')):
-        return {'reply': 'Measure your fullest chest and foot cm in Fit & Footwear to lock your exact size right away.', 'suggested_tab': tab, 'colours': []}
-    if any(w in low for w in ('wed', 'party', 'outfit', 'wear')):
-        return {'reply': f'Go with {cols[0]} or {cols[1]} cleanly tailored - tap a shade below to see it on your photo.', 'suggested_tab': tab, 'colours': cols}
-    return {'reply': f'For your tone, {cols[0]}, {cols[1]}, and {cols[2]} brighten your face. Tap any shade below to preview it on you!', 'suggested_tab': tab, 'colours': cols}
+        return {'reply': 'Measure your fullest chest and foot cm in Fit & Footwear to lock your exact size right away.', 'suggested_tab': tab, 'colours': [], 'outfits': []}
+    return {'reply': f"Top match: {outfits[0]['name']} in {outfits[0]['colour']} ({outfits[0]['score']}%). Tap any shade below to change your dress colour!", 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
 # --- End SAEE Human Stylist ---

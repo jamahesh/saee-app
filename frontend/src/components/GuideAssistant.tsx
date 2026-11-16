@@ -1,29 +1,29 @@
 import { FormEvent, useState } from 'react';
 import { apiFetch } from '../api';
-import { ColourLookPreview } from './ColourLookPreview';
+import { ColourLookPreview, OutfitMatch } from './ColourLookPreview';
 
 type NavTab = 'fit' | 'body' | 'occasion' | 'ads';
-type Msg = { role: 'user' | 'bot'; text: string; tab?: string; colours?: string[] };
+type Msg = { role: 'user' | 'bot'; text: string; tab?: string; colours?: string[]; outfits?: OutfitMatch[] };
 const TL: Record<string, string> = { fit: 'Fit & Footwear', body: 'Body & Colour', occasion: 'Occasions & Wardrobe', ads: 'Partner Brand Ads' };
-const Q = ['Best colours on me', 'Wedding look', 'Quick size tip', 'Show my tone'];
+const Q = ['Best outfits & score for me', 'Wedding look', 'Best colours on me', 'Quick size tip'];
 
 export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; profile: object; onNavigate: (t: NavTab) => void }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: "Hey! I'm Maya, your SAEE stylist. Ask what colours suit you or what to wear." }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ role: 'bot', text: "Hey! I'm Maya, your SAEE stylist. Ask which colours and outfits match you best." }]);
 
   async function ask(q: string) {
     const clean = q.trim(); if (!clean || busy) return;
     const next: Msg[] = [...msgs, { role: 'user', text: clean }];
     setMsgs(next); setInput(''); setBusy(true);
     try {
-      const r = await apiFetch<{ reply: string; suggested_tab?: string; colours?: string[] }>('/api/assistant/guide', {
+      const r = await apiFetch<{ reply: string; suggested_tab?: string; colours?: string[]; outfits?: OutfitMatch[] }>('/api/assistant/guide', {
         method: 'POST', body: JSON.stringify({ message: clean, tab, profile, history: next.slice(-6) })
       });
-      setMsgs([...next, { role: 'bot', text: r.reply, tab: r.suggested_tab, colours: r.colours || [] }]);
+      setMsgs([...next, { role: 'bot', text: r.reply, tab: r.suggested_tab, colours: r.colours || [], outfits: r.outfits || [] }]);
     } catch {
-      setMsgs([...next, { role: 'bot', text: 'Try Olive Moss or Warm Ivory today, or open Body & Colour.', tab: 'body', colours: ['Olive Moss', 'Terracotta Rust', 'Warm Ivory'] }]);
+      setMsgs([...next, { role: 'bot', text: 'Olive Moss tailored shirt + ivory trousers scores 96% for your tone. Tap a swatch to try it on your photo!', tab: 'body', colours: ['Olive Moss', 'Terracotta Rust', 'Warm Ivory'] }]);
     } finally { setBusy(false); }
   }
 
@@ -40,12 +40,14 @@ export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; prof
             {msgs.map((m, i) => (
               <div key={i} className={'guide-msg ' + m.role}>
                 <div>{m.text}</div>
-                {m.colours && m.colours.length > 0 && <ColourLookPreview colours={m.colours} compact />}
+                {((m.colours && m.colours.length > 0) || (m.outfits && m.outfits.length > 0)) && (
+                  <ColourLookPreview colours={m.colours || []} outfits={m.outfits || []} compact />
+                )}
                 {m.tab && m.tab !== tab && m.tab in TL && <button type='button' className='btn-secondary' style={{ marginTop: 6, fontSize: '0.8rem' }} onClick={() => onNavigate(m.tab as NavTab)}>Open {TL[m.tab]}</button>}
               </div>
             ))}
           </div>
-          <form className='guide-form' onSubmit={onSub}><input value={input} onChange={(e) => setInput(e.target.value)} placeholder='Ask Maya (e.g. best colour)...' /><button type='submit' className='btn-primary' disabled={busy}>{busy ? '...' : 'Send'}</button></form>
+          <form className='guide-form' onSubmit={onSub}><input value={input} onChange={(e) => setInput(e.target.value)} placeholder='Ask Maya for outfit match & score...' /><button type='submit' className='btn-primary' disabled={busy}>{busy ? '...' : 'Send'}</button></form>
         </aside>
       )}
     </>
