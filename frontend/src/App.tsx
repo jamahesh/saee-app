@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { apiFetch, getToken, setToken } from "./api";
+import { apiFetch } from "./api";
 import { AdsAndPlans } from "./components/AdsAndPlans";
 import { FitPanel } from "./components/FitPanel";
 import { StyleStudio } from "./components/StyleStudio";
 import type { PartnerAd, PlanInfo, ProfileData, User, WardrobeItem } from "./types";
 
-type Tab = "fit" | "body" | "occasion" | "plans" | "ads";
+type Tab = "fit" | "body" | "occasion" | "ads";
 
 const DEFAULT_PROFILE: ProfileData = {
   body_colour: "Medium Wheatish",
@@ -23,7 +23,12 @@ const DEFAULT_PROFILE: ProfileData = {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("fit");
-  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("saee_theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+  const [user, setUser] = useState<User | null>({id:0,email:"guest@saee.app",name:"SAEE Guest",role:"owner",plan_code:"studio",plan_status:"active",plan_active:true} as unknown as User);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
   const [razorpayReady, setRazorpayReady] = useState(false);
   const [geminiReady, setGeminiReady] = useState(false);
@@ -32,13 +37,16 @@ export default function App() {
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [banner, setBanner] = useState<{ kind: "ok" | "warn" | "err"; text: string } | null>(null);
   const showMessage = (kind: "ok" | "warn" | "err", text: string) => setBanner({ kind, text });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("saee_theme", theme);
+  }, [theme]);
 
   async function refreshAds() {
     try { setAds((await apiFetch<{ ads: PartnerAd[] }>("/api/ads/active")).ads || []); } catch {}
   }
 
   async function refreshWardrobe() {
-    if (!getToken()) return;
     try {
       const r = await apiFetch<{ items?: WardrobeItem[] } | WardrobeItem[]>("/api/wardrobe");
       setWardrobe(Array.isArray(r) ? r : r.items || []);
@@ -46,7 +54,6 @@ export default function App() {
   }
 
   async function loadUserContext() {
-    if (!getToken()) return;
     try {
       const me = await apiFetch<{ user: User }>("/api/auth/me");
       setUser(me.user);
@@ -58,16 +65,13 @@ export default function App() {
         } catch {}
         await refreshWardrobe();
       }
-    } catch {
-      setToken("");
-      setUser(null);
-    }
+    } catch {}
   }
 
   useEffect(() => {
     apiFetch<{ razorpay_ready: boolean; gemini_ready: boolean; plans: PlanInfo[] }>("/api/plans")
       .then((d) => { setPlans(d.plans || []); setRazorpayReady(Boolean(d.razorpay_ready)); setGeminiReady(Boolean(d.gemini_ready)); })
-      .catch(() => showMessage("err", "SAEE backend unavailable on port 8001."));
+      .catch(() => showMessage("warn", "SAEE server is waking up (~30s on free plan) — please refresh in a moment."));
     void refreshAds();
     void loadUserContext();
   }, []);
@@ -79,17 +83,7 @@ export default function App() {
       showMessage("ok", `Tracked click for ${ad.brand_name}: ${ad.offer_text}`);
     } catch {}
   }
-
-  function signOut() {
-    setToken("");
-    setUser(null);
-    setWardrobe([]);
-    setProfile(DEFAULT_PROFILE);
-    showMessage("ok", "Signed out of SAEE.");
-  }
-
-  const hasPlan = Boolean(user?.plan_active);
-  const isAdFree = Boolean(hasPlan && user?.plan_code === "studio");
+  const isAdFree = false;
 
   return (
     <div className="saee-shell">
@@ -99,21 +93,13 @@ export default function App() {
           <span className="brand-tag">Your Style. Your Intelligence.</span>
         </div>
         <div className="account-bar">
-          {user ? (
-            <>
-              <span className={`plan-badge ${hasPlan ? "active" : ""}`}>
-                {user.name} &middot; {hasPlan ? `${String(user.plan_code).toUpperCase()}${user.plan_status === "trial" ? " (7-DAY TRIAL)" : ""}` : "NO ACTIVE PLAN"}
-              </span>
-              <button type="button" className="btn-secondary" onClick={signOut}>Sign Out</button>
-            </>
-          ) : (
-            <button type="button" className="btn-primary" onClick={() => setTab("plans")}>Sign In / Plans (From ₹99/mo)</button>
-          )}
+          <button type="button" className="btn-secondary" onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>{theme === "dark" ? "Light Mode" : "Dark Mode"}</button>
+          <span className="plan-badge active">ALL SERVICES OPEN</span>
         </div>
       </header>
 
       <nav className="nav-tabs">
-        {([["fit", "Fit & Footwear"], ["body", "Body & Colour + Photo"], ["occasion", "Occasion AI & Wardrobe"], ["plans", "Plans (₹99 - ₹499)"], ["ads", "Partner Brand Ads"]] as [Tab, string][]).map(([id, label]) => (
+        {([["fit", "Fit & Footwear"], ["body", "Body & Colour + Photo"], ["occasion", "Occasion AI & Wardrobe"], ["ads", "Partner Brand Ads"]] as [Tab, string][]).map(([id, label]) => (
           <button key={id} type="button" className={`tab-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
         ))}
       </nav>
@@ -125,26 +111,21 @@ export default function App() {
         </div>
       )}
 
-      {!hasPlan && tab !== "plans" && (
-        <div className="notice warn" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span><strong>Plan Required:</strong> Without buying a plan (or activating the 1-time 7-Day Essential Free Trial), SAEE services are locked.</span>
-          <button type="button" className="btn-primary" onClick={() => setTab("plans")}>Buy Plan / Start Trial</button>
-        </div>
-      )}
+      
 
-      {tab === "fit" && <FitPanel user={user} profile={profile} onMessage={showMessage} onGoPlans={() => setTab("plans")} />}
+      {tab === "fit" && <FitPanel user={user} profile={profile} onMessage={showMessage} onGoPlans={() => setTab("fit")} />}
       {(tab === "body" || tab === "occasion") && (
-        <StyleStudio mode={tab} user={user} profile={profile} wardrobe={wardrobe} onProfileChange={setProfile} onWardrobeRefresh={refreshWardrobe} onMessage={showMessage} onGoPlans={() => setTab("plans")} />
+        <StyleStudio mode={tab} user={user} profile={profile} wardrobe={wardrobe} onProfileChange={setProfile} onWardrobeRefresh={refreshWardrobe} onMessage={showMessage} onGoPlans={() => setTab("fit")} />
       )}
-      {(tab === "plans" || tab === "ads") && (
-        <AdsAndPlans mode={tab} user={user} plans={plans} razorpayReady={razorpayReady} geminiReady={geminiReady} ads={ads} onAuthChange={(u) => { setUser(u); if (u) void loadUserContext(); }} onRefreshAds={refreshAds} onMessage={showMessage} />
+      {tab === "ads" && (
+        <AdsAndPlans mode="ads" user={user} plans={plans} razorpayReady={razorpayReady} geminiReady={geminiReady} ads={ads} onAuthChange={(u) => { setUser(u); if (u) void loadUserContext(); }} onRefreshAds={refreshAds} onMessage={showMessage} />
       )}
 
       {!isAdFree && ads.length > 0 && (
         <section className="ad-strip" id="partners">
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <strong>Curated Partner Brands (Ad-Supported Tier)</strong>
-            <span className="muted">Upgrade to Studio Family (₹499/mo) for ad-free mode</span>
+            <span className="muted">Explore featured partner offers</span>
           </div>
           <div className="ad-cards">
             {ads.slice(0, 3).map((ad) => (

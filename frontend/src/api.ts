@@ -1,3 +1,4 @@
+async function fTry(u:string,i?:RequestInit):Promise<Response>{for(let k=0;k<2;k++){try{const r=await fetch(u,i);if(k===0&&[502,503,504].includes(r.status)){await new Promise(x=>setTimeout(x,3500));continue}return r}catch(e){if(k===1)throw e;await new Promise(x=>setTimeout(x,3500))}}throw new Error("Network error")}
 export const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
 
@@ -25,7 +26,7 @@ export async function apiFetch<T>(
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fTry(`${API_BASE}${path}`, { ...options, headers });
   const text = await res.text();
   let data: Record<string, unknown> = {};
   try {

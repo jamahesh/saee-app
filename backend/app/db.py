@@ -15,8 +15,7 @@ if not raw_url or raw_url.startswith("sqlite:///./"):
 else:
     URL = raw_url
 
-engine = create_engine(
-    URL,
+engine = create_engine(URL.replace("postgres://","postgresql://",1),pool_pre_ping=True,
     connect_args={"check_same_thread": False} if URL.startswith("sqlite") else {},
 )
 Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
