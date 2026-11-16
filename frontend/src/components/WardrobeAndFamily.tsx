@@ -222,7 +222,6 @@ export function FamilyAndWardrobe({
               <option value="Topwear">Topwear</option>
               <option value="Bottomwear">Bottomwear</option>
               <option value="Ethnic">Ethnic</option>
-              <option value="Footwear">Footwear</option>
               <option value="Outerwear">Outerwear</option>
             </select>
           </div>

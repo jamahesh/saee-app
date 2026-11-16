@@ -352,9 +352,9 @@ def _score_outfits(prof, cols, occ='Everyday'):
     ut = str((prof or {}).get('undertone', 'Warm')).title()
     c0, c1, c2 = cols[0], cols[1], cols[2] if len(cols) > 2 else 'Warm Ivory'
     return [
-        {'name': f'Tailored {fit} Shirt & Tapered Trousers', 'colour': c0, 'score': 97, 'why': f'Top tone match for {ut} undertone + sharp shoulder line for {occ}.', 'pieces': f'{c0} structured top + clean ivory trousers + leather loafers'},
-        {'name': 'Textured Overshirt / Midi Dress Set', 'colour': c1, 'score': 92, 'why': f'Balances mid-contrast framing cleanly in {occ} light.', 'pieces': f'{c1} main piece + minimal metal watch & structured shoes'},
-        {'name': 'Relaxed Linen Monochrome Look', 'colour': c2, 'score': 86, 'why': 'Soft timeless option that pairs effortlessly with neutral footwear.', 'pieces': f'{c2} breathable layer + neutral bottom'}
+        {'name': f'Tailored {fit} Shirt & Tapered Trousers', 'colour': c0, 'score': 97, 'why': f'Top tone match for {ut} undertone + sharp shoulder line for {occ}.', 'pieces': f'{c0} structured top + clean ivory trousers + tailored belt & crisp watch'},
+        {'name': 'Textured Overshirt / Midi Dress Set', 'colour': c1, 'score': 92, 'why': f'Balances mid-contrast framing cleanly in {occ} light.', 'pieces': f'{c1} main piece + minimal metal watch & tailored collar'},
+        {'name': 'Relaxed Linen Monochrome Look', 'colour': c2, 'score': 86, 'why': 'Soft timeless option that pairs effortlessly with minimal accessories.', 'pieces': f'{c2} breathable layer + neutral bottom'}
     ]
 def _sh(s, n=140):
     t = _sre.sub(r'\s+', ' ', _sre.sub(r'Add GEMINI_API_KEY[^.]*[.]?', '', str(s or ''))).strip()
@@ -368,7 +368,7 @@ async def _saee_stylist_mw(request, call_next):
         hdrs = {k: v for k, v in resp.headers.items() if k.lower() != 'content-length'}
         try:
             d = _sj.loads(raw.decode('utf-8'))
-            for k in ('used_gemini', 'photo_received', 'photo_included'): d.pop(k, None)
+            for k in ('used_gemini', 'photo_received', 'photo_included', 'footwear'): d.pop(k, None)
             occ = str(d.get('occasion', 'today'))
             cols = d.get('colour_story') or ['Olive Moss', 'Terracotta Rust', 'Warm Ivory']
             if isinstance(cols, list) and cols:
@@ -401,7 +401,7 @@ async def saee_human_guide(payload: dict):
             return {'reply': _sh(txt, 165), 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
         except Exception:
             pass
-    if any(w in low for w in ('size', 'fit', 'meas', 'shoe', 'foot')):
-        return {'reply': 'Measure your fullest chest and foot cm in Fit & Footwear to lock your exact size right away.', 'suggested_tab': tab, 'colours': [], 'outfits': []}
+    if any(w in low for w in ('size', 'fit', 'meas', 'chest', 'waist')):
+        return {'reply': 'Measure your chest and waist cm in Fit & Sizing to get your exact garment size right away.', 'suggested_tab': tab, 'colours': [], 'outfits': []}
     return {'reply': f"Top match: {outfits[0]['name']} in {outfits[0]['colour']} ({outfits[0]['score']}%). Tap any shade below to change your dress colour!", 'suggested_tab': tab, 'colours': cols, 'outfits': outfits}
 # --- End SAEE Human Stylist ---

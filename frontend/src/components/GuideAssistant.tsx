@@ -4,7 +4,7 @@ import { ColourLookPreview, OutfitMatch } from './ColourLookPreview';
 
 type NavTab = 'fit' | 'body' | 'occasion' | 'ads';
 type Msg = { role: 'user' | 'bot'; text: string; tab?: string; colours?: string[]; outfits?: OutfitMatch[] };
-const TL: Record<string, string> = { fit: 'Fit & Footwear', body: 'Body & Colour', occasion: 'Occasions & Wardrobe', ads: 'Partner Brand Ads' };
+const TL: Record<string, string> = { fit: 'Fit & Sizing', body: 'Body & Colour', occasion: 'Occasions & Wardrobe', ads: 'Partner Brand Ads' };
 const Q = ['Best outfits & score for me', 'Wedding look', 'Best colours on me', 'Quick size tip'];
 
 export function GuideAssistant({ tab, profile, onNavigate }: { tab: string; profile: object; onNavigate: (t: NavTab) => void }) {

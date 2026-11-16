@@ -18,7 +18,6 @@ const NUM_FIELDS: [keyof ProfileData, string, string?][] = [
   ["waist_cm", "Waist (cm)"],
   ["hips_cm", "Hips (cm)"],
   ["shoulder_cm", "Shoulder (cm)"],
-  ["foot_length_cm", "Foot Length (cm)", "0.1"],
 ];
 
 export function BodyColourPanel({ user, profile, onProfileChange, onMessage, onGoPlans }: Props) {

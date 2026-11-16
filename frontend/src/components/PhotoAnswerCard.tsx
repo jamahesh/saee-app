@@ -37,7 +37,7 @@ export async function fileToCompressedBase64(file: File): Promise<PhotoPayload> 
 export function SmartOutput({ title, data }: { title: string; data: any }) {
   if (!data) return null;
   const rec = data as Record<string, unknown>;
-  const hide = new Set(['used_gemini', 'photo_received', 'photo_included', 'chart_verified', 'confidence_note', 'outfit_matches']);
+  const hide = new Set(['used_gemini', 'photo_received', 'photo_included', 'chart_verified', 'confidence_note', 'footwear', 'outfit_matches']);
   const cols = extractColours(rec);
   const outfits = buildOutfitMatches(rec, cols);
   const sh = (v: string) => { const x = v.replace(/Add GEMINI_API_KEY[^.]*[.]?/gi, '').replace(/\s+/g, ' ').trim(); return x.length > 140 ? x.slice(0, 137).trim() + '...' : x; };
